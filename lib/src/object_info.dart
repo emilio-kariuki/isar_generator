@@ -5,6 +5,15 @@ import 'package:isar/isar.dart';
 
 import 'package:xxh3/xxh3.dart';
 
+/// Generates a JavaScript-safe integer ID from a string.
+/// JavaScript's Number.MAX_SAFE_INTEGER is 2^53 - 1 (9007199254740991).
+/// This function ensures the generated ID stays within this range.
+int _generateJsSafeId(String input, [int seed = 0]) {
+  final hash = xxh3(utf8.encode(input), seed: seed);
+  // Mask to 53 bits to ensure JavaScript safety
+  return hash & 0x1FFFFFFFFFFFFF;
+}
+
 class ObjectInfo {
   ObjectInfo({
     required this.dartName,
@@ -26,7 +35,7 @@ class ObjectInfo {
   final List<ObjectIndex> indexes;
   final List<ObjectLink> links;
 
-  int get id => xxh3(utf8.encode(isarName));
+  int get id => _generateJsSafeId(isarName);
 
   bool get isEmbedded => accessor == null;
 
@@ -176,7 +185,7 @@ class ObjectIndex {
   final bool unique;
   final bool replace;
 
-  late final id = xxh3(utf8.encode(name));
+  late final id = _generateJsSafeId(name);
 }
 
 class ObjectLink {
@@ -202,9 +211,9 @@ class ObjectLink {
 
   int id(String objectIsarName) {
     final col = isBacklink ? targetCollectionIsarName : objectIsarName;
-    final colId = xxh3(utf8.encode(col), seed: isBacklink ? 1 : 0);
+    final colId = _generateJsSafeId(col, isBacklink ? 1 : 0);
 
     final name = targetLinkIsarName ?? isarName;
-    return xxh3(utf8.encode(name), seed: colId);
+    return _generateJsSafeId(name, colId);
   }
 }
